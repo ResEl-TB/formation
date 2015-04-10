@@ -1,0 +1,1 @@
+./clean.sh ; pdflatex -shell-escape coursreseauv2.tex ; pdflatex -shell-escape coursreseauv2.tex

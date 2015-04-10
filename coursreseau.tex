@@ -1,0 +1,974 @@
+%%
+%% Introduction au Réseau pour le ResEl
+%%
+%%
+%% Copyright (C) 2005 Association ResEl <gestion@resel.enst-bretagne.fr>
+%% Ce document est un document libre ; vous pouvez le redistribuer et/ou
+%% le modifier au titre des clauses de la Licence Publique Générale GNU,
+%% telle que publiée par la Free Software Foundation ; soit la version 2
+%% de la Licence, ou (à votre discrétion) une version ultérieure
+%% quelconque. Ce docuement est distribué dans l'espoir qu'il sera utile,
+%% mais SANS AUCUNE GARANTIE ; sans même une garantie implicite de
+%% COMMERCIABILITE ou DE CONFORMITE A UNE UTILISATION PARTICULIERE. Voir
+%% la Licence Publique Générale GNU pour plus de détails. Vous devriez
+%% avoir reçu un exemplaire de la Licence Publique Générale GNU avec ce
+%% document ; si ce n'est pas le cas, écrivez à la Free Software
+%% Foundation Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+%% 02110-1301, USA.
+
+%\documentclass[xcolor=pst,compress]{beamer}
+\documentclass{beamer}
+% xcolor = bst pour pouvoir utiliser PSTricks et Beamer
+
+\usepackage[francais]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{pstricks,xspace}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{color}
+\usepackage{listings}
+
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows}
+\usetikzlibrary{calc}
+
+\def«{\og}
+\def»{\fg}
+
+%%Pour la création de jolie paquet (IP, ARP,\ldots) avec tikz
+
+\newlength\packetphylength
+\newlength\packetphyheight
+\newlength\packetxcur
+\newlength\packetycur
+\newlength\packetfsize
+
+\newcommand\packetinit[0]{
+\setlength\packetphylength{10cm}
+\def\packetlength{32}
+\setlength\packetphyheight{20pt}
+\setlength\packetxcur{0cm}
+\setlength\packetycur{0cm}
+}
+
+
+\newcommand\packet[2]{%
+\pgfmathsetlength\packetfsize{(\packetphylength*#1/\packetlength - 2*.3333em)/ 1pt}%
+\node[box, text width= \packetfsize,minimum height=\packetphyheight,xshift=\packetxcur,yshift=\packetycur,anchor=west] {\begin{minipage}{\textwidth}\centering #2\end{minipage}};%
+\pgfmathsetlength\packetxcur{\packetxcur + \packetphylength*#1/\packetlength}
+}
+
+\newcommand\packetline[0]{\addtolength\packetycur{-\packetphyheight}\setlength\packetxcur{0cm}}
+
+
+\newcommand\packetdelim[1]{
+\pgfmathsetlength\packetfsize{(\packetphylength*#1/\packetlength)}%
+
+\draw[dashed] (\packetfsize,.5\packetphyheight) -- + (0,0.5\packetphyheight) node [midway,anchor=west] {\tiny #1};
+}
+
+
+%% Pour formatter correctement les adresses MAC
+\newcommand\macaddr[1]{{\NoAutoSpaceBeforeFDP #1}}
+
+%% Rajoute un \strut pour que la couleur résiste à un \item devant...
+\newcommand{\vavers}{\strut{\red$\leadsto$}\xspace}
+
+\mode<presentation>
+{
+  %\usetheme{Warsaw}
+
+  % Variation sur le thème de Warsaw
+  % (principalement à cause du rappel du plan en haut
+  %  qui est devenu trop long)
+  \useinnertheme{rounded}
+  \useoutertheme{infolines}
+  \usecolortheme{orchid}
+  \usecolortheme{whale}
+
+  \setbeamercovered{transparent}
+
+  % On supprime la barre de navigation
+  \setbeamertemplate{navigation symbols}{}
+}
+
+\title[Introduction aux réseaux IP]
+{ResEl~102 : Présentation des notions de réseau utilisées au ResEl}
+
+\author[Association ResEl]
+{
+  Association ResEl\\
+  \texttt{<support@resel.fr>}
+}
+
+\institute[Réseau des Élèves]
+{
+  Réseau des Élèves de Télécom Bretagne
+}
+
+%\date{today}
+
+
+\subject{ResEl~102 : Présentation de notions de réseau utilisées au ResEl}
+\keywords{ResEl,réseau}
+
+
+% Logo du ResEl
+\pgfdeclareimage[height=0.4cm]{resel}{logo_ResEl}
+\logo{\pgfuseimage{resel}}
+
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+\AtBeginSection[]
+{
+  \begin{frame}<beamer>
+    \frametitle{Plan}
+    \scriptsize
+    \tableofcontents[currentsection,hideallsubsections]
+    \normalsize
+  \end{frame}
+}
+
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+%\AtBeginSubsection[]
+%{
+%  \begin{frame}<beamer>
+%    \frametitle{Plan}
+%    \scriptsize
+%    \tableofcontents[currentsection,currentsubsection]
+%    \normalsize
+%  \end{frame}
+%}
+
+
+% If you wish to uncover everything in a step-wise fashion, uncomment
+% the following command:
+%\beamerdefaultoverlayspecification{<+->}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
+  \frametitle{Licence}
+
+  \begin{block}{}
+    Ces slides sont sous licence GPL (General Public Licence). Ils
+    sont disponibles, avec leur code source sur le site de
+    l'Association ResEl
+    (\href{http://resel.fr}{\texttt{http://resel.fr}}).
+
+    \vspace{1cm}
+
+    Ils ont été créés à partir de logiciels libres (\LaTeX -beamer).
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
+  \frametitle{Plan}
+  \scriptsize
+  \tableofcontents[hideallsubsections]
+  \normalsize
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\logo{}
+\section{Introduction}
+\subsection{Ceci n'est pas un cours de RES}
+
+\begin{frame}
+  \frametitle{Ceci n'est pas un cours de RES}
+
+  \begin{block}{}
+    \begin{itemize}
+      \item Il faut avoir un minimum suivi en cours (être allé au premier amphi...)
+      \item On ne va pas vous assomer avec trop de théorie :
+      \begin{itemize}
+	\item une découverte des protocoles~;
+	\item présentation rapide de ceux-ci sans entrer dans les détails~;
+	\item pour ceux qui veulent en savoir plus, beaucoup de documentation
+        sur internet (sites dédiés, RFCs, ...).
+      \end{itemize}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\subsection{Modèle TCP/IP}
+\begin{frame}[fragile]
+  \frametitle{Un empilement de couches}
+  \begin{block}{De l’application à la transmission physique}
+  \begin{center}
+\begin{tikzpicture}[box/.style={rectangle,ultra thick,draw=black,text width=.3\textwidth},
+lbox/.style={rectangle,ultra thick,draw=black,text width=.956\textwidth},
+node distance=.005\textwidth]
+%%
+\node [box] (ethernet) {
+\begin{minipage}{\textwidth}
+\centering\textbf{Ethernet}
+\end{minipage}
+};
+%%
+\node [box,above=of ethernet] (IP) {
+\begin{minipage}{\textwidth}
+\centering\textbf{IP}
+\end{minipage}
+};
+
+\node [box,above=of IP,text width=.13\textwidth, xshift=-.085\textwidth] (TCP) {
+\begin{minipage}{\textwidth}
+\centering\textbf{TCP}
+\end{minipage}
+};
+
+\node [box,above=of IP,text width=.13\textwidth, xshift=.085\textwidth] (UDP) {
+\begin{minipage}{\textwidth}
+\centering\textbf{UDP}
+\end{minipage}
+};
+
+\node [box,above=of UDP, xshift=-.085\textwidth] (ayph) {
+\begin{minipage}{\textwidth}
+\centering\textbf{Add your protocol here !}
+\end{minipage}
+};
+
+\node [box,above=of ayph] (application) {
+\begin{minipage}{\textwidth}
+  \centering\textbf{Application}
+\end{minipage}
+};
+
+\node [right=of ethernet] {transmission physique et réseaux locaux};
+\node [right=of IP] {connexion entre les réseaux locaux};
+\node [right=of UDP] {différenciation entre les applications};
+\node [right=of application] {votre application};
+  \end{tikzpicture}
+  \end{center}
+\end{block}
+
+\end{frame}
+
+\newcommand\protocolframe[0]{
+\begin{frame}
+  \frametitle{Un empilement de couche}
+  \begin{block}{Les protocoles utilisés en réseau}
+    \begin{center}
+
+\begin{tikzpicture}
+  \node (Ethernet) {Ethernet}
+  [grow=up]
+  child { node{ARP}}
+  child { node (IP) {IP}
+  [grow=up]
+	  child [grow=north east] {node (TCP) {TCP}}
+	  child [grow=north west] {node (UDP) {UDP}}
+	  child [grow=left] {node{ICMP}}
+	};
+
+
+	\node [above=5pt of UDP] (app) { Application };
+	\node [right=of app] (dhcp) { DHCP };
+%\coordinate (e0) at (Ethernet.south) +(0,-2);
+\coordinate (ho) at (-5,0);
+
+\coordinate (f0) at (Ethernet.south -| 0,-2);
+\coordinate (f1) at ($ 0.5*(Ethernet.north)+0.5*(IP.south)  $);
+\coordinate (f2) at ($ 0.5*(IP.north)+0.5*(TCP.south)  $);
+\coordinate (f3) at (TCP.north) + (0,1);
+
+\coordinate (e0) at (f0 -| ho);
+\coordinate (e1) at (f1 -| ho);
+\coordinate (e2) at (f2 -| ho);
+\coordinate (e3) at (f3 -| ho);
+
+%\coordinate (f1) at let \p1 = (e1) in -(5,\y1);
+%\coordinate let \p1 = (e1) in (f1) at (-5,y1);
+
+\draw[dashed] let \p1 = (e1) in (e1) -- +(8,0);
+\draw[dashed] let \p1 = (e2) in (e2) -- +(8,0);
+\draw[dashed] let \p1 = (e3) in (e3) -- +(8,0);
+
+\node[anchor=west] at ($0.5*(e0)+0.5*(e1)$) { liaison };
+\node[anchor=west] at ($0.5*(e1)+0.5*(e2)$) { réseau };
+\node[anchor=west] at ($0.5*(e2)+0.5*(e3)$) { transport };
+\node[anchor=west] at ($(e3)+(0,0.5)$) { application };
+\end{tikzpicture}
+
+\end{center}
+  \end{block}
+\end{frame}
+}
+
+\protocolframe
+
+\section{Ethernet}
+\subsection{Présentation}
+
+
+\pgfdeclareshape{terminal}
+{
+\inheritsavedanchors[from=rectangle]
+\inheritanchorborder[from=rectangle]
+\inheritanchor[from=rectangle]{center}
+%\inheritanchor[from=rectangle]{west}
+\inheritanchor[from=rectangle]{east}
+%\savedanchor{\east}{\x=.7\ht\pgfnodeparttextbox
+%\y=.7\ht\pgfnodeparttextbox
+%}
+\inheritanchor[from=rectangle]{north}
+\inheritanchor[from=rectangle]{south}
+
+\savedanchor\northeast{%
+\pgfpoint{\the\hd\pgfnodeparttextbox}{%
+1\wt\pgfnodeparttextbox}
+}
+
+\backgroundpath{
+\pgftransformshift{\west}
+\input{cterminal.tex}
+}
+}
+
+%Et hop, on fait un joli schéma au tableau
+%avec trois machines qui s’échangent des trames ethernet
+
+%\begin{frame}[fragile]
+%  \frametitle{Ethernet}
+%  \begin{block}{Entête Ethernet}
+%    \begin{center}
+%\begin{tikzpicture}[box/.style={rectangle,draw=black,text centered, text width=.3\textwidth},
+%lbox/.style={rectangle,ultra thick,draw=black,text width=.956\textwidth},
+%node distance=.005\textwidth,minimum height=1.7em]
+%
+%
+%\node[draw,shape=terminal] (tt) {};
+%
+%\draw (tt.north) -- (4,0) node {toto};
+%
+%      \end{tikzpicture}
+%    \end{center}
+%  \end{block}
+%
+%
+%\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Ethernet}
+  \begin{block}{Ethernet}
+    \begin{itemize}
+      \item Définition de la couche physique : \\
+	\hspace{1em} cable RJ-45, fibre, \ldots
+      \item Protocole de liaison
+      \item Adressage des interfaces \\ MAC = Medium Access Control \\ adresse de 6 octets
+      \item Exemple : 00-24-BE-B8-70-B9
+	    souvent écrit \macaddr{00:24:BE:B8:70:B9}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Ethernet}
+  \begin{block}{Adresses}
+    \begin{itemize}
+      \item Format : $\underbrace{\text{00-24-BE}}_{\text{\begin{minipage}{2.2cm}\centering Organisationally \\ Unique Identifier \\ (OUI)\end{minipage}}} 
+	  \text{-} 
+	  \underbrace{\text{B8-70-B9}}_{\text{\begin{minipage}{2.2cm}\centering Network Interface Controller (NIC) Specific\end{minipage}}}$
+
+      \item Premier octet :
+	\begin{itemize}
+	  \item bit 0 : \\
+	    \hspace{1em}0 -- unicast \\
+	    \hspace{1em}1 -- multicast
+	  \item bit 1 : \\
+	    \hspace{1em}0 -- globally unique \\
+	    \hspace{1em}1 -- locally administered
+	\end{itemize}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Ethernet}
+  \begin{block}{Entête Ethernet}
+    \begin{center}
+\begin{tikzpicture}[box/.style={rectangle,draw=black,text centered, text width=.3\textwidth},
+lbox/.style={rectangle,ultra thick,draw=black,text width=.956\textwidth},
+node distance=.005\textwidth,minimum height=1.7em]
+
+\matrix[nodes=draw,column sep = -0.1mm] {
+\node[text width=2.5cm] (dst)  { MAC dest }; &
+\node[text width=2.5cm] (src)  { MAC src }; &
+\node[text width=1cm] (type)  { Type }; &
+\node[text width=2.8cm] (data)  { Données }; &
+\node[text width=1cm] (crc)  { CRC }; \\
+};
+
+\node[above left =of dst,anchor=south west] {0};
+\node[above right =of dst,anchor=south east] {5};
+
+\node[above left =of src,anchor=south west] {6};
+\node[above right =of src,anchor=south east] {11};
+
+\node[above left =of type,anchor=south west] {12};
+\node[above right =of type,anchor=south east] {13};
+
+\node[above left =of crc,anchor=south west] {end-2};
+\node[above right =of crc,anchor=south west] {end};
+
+\draw[dashed] (dst.north west) -- + (0,15pt);
+\draw[dashed] (src.north west) -- + (0,15pt);
+\draw[dashed] (type.north west) -- + (0,15pt);
+\draw[dashed] (data.north west) -- + (0,15pt);
+\draw[dashed] (crc.north west) -- + (0,15pt);
+\draw[dashed] (crc.north east) -- + (0,15pt);
+
+      \end{tikzpicture}
+    \end{center}
+  \end{block}
+
+  \only<2>{
+  \begin{block}{Type}
+    \begin{itemize}
+      \item IPv4 : 0x800
+      \item IPv6 : 0x86DD
+      \item ARP : 0x806
+      \item \ldots
+    \end{itemize}
+  \end{block}
+  }
+\end{frame}
+
+\subsection{Réseaux locaux switchés}
+\begin{frame}
+  \frametitle{Pont et commutateur}
+  \begin{block}{Pont (bridge)}
+    \begin{itemize}
+      \item Relie deux réseaux
+      \item Recopie les trames d’un réseau vers l’autre et vice-versa
+      \item Écoute le réseau et établit une liste des MAC vue
+      \item Ne recopie la trame que si l’adresse de destination est inconnu ou qu’elle se situe sur le réseau opposé
+      \item Permet la conversion d’un support physique à un autre (exemple : RJ-45 $\rightarrow$ Fibre optique)
+    \end{itemize}
+  \end{block}
+  \begin{block}<2->{Commutateur (switch)}
+    \begin{itemize}
+      \item Architecture similaire à un pont
+      \item De 4 à plus de 48 interfaces réseaux
+      \item Au ResEl, deux switchs par bâtiment (un de 48 et un de 24 ports)
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Les VLANs}
+  \begin{block}{Sécurité de la couche Ethernet}
+    \begin{itemize}
+      \item Problème : tout le monde peut communiquer avec tout le monde
+      \item Pas de protection offerte par le réseau contre les attaques
+    \end{itemize}
+  \end{block}
+  \begin{block}<2->{Utilisation de VLAN}
+    \begin{itemize}
+      \item Séparation en réseaux virtuel (VLAN)
+      \item 1 VLAN = 1 identifiant
+      \item Chaque port est placé dans un VLAN particulier
+      \item Les ports dans des VLAN différents ne peuvent communiquer ensemble
+      \item Ajout d’un champ dans la trame Ethernet
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Les VLANs}
+  \begin{block}{Entre les switchs}
+    \begin{itemize}
+      \item trunk : Extension protocole Ethernet pour ajouter les numéros de VLAN dans les trames
+      \item Permet d’avoir plusieurs VLAN sur la même interface
+      \item Sous Linux : création de sous-interfaces virtuelles pour chaque VLAN
+      \item Au ResEl : pas de trunk sur les ports utilisateurs sinon ils pourraient se connecter sur n’importe quel VLAN du trunk
+    \end{itemize}
+  \end{block}
+  \begin{block}<2>{Au ResEl}
+    \begin{itemize}
+      \item 999 -- Utilisateurs
+      \item 995 -- Inscription
+      \item 996 -- Contamination
+      \item 994 -- Administration : zone publique
+      \item 997 -- Administration : zone privée
+      \item \ldots
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Atouts et limites de l’Ethernet}
+  \begin{block}{Atouts de l’Ethernet}
+    \begin{itemize}
+      \item Permet une connexion entre tout les machines du réseau
+      \item Adressage unique : pas besoin de configuration
+      \item Simple à mettre en œuvre
+      \item Fiable : un paquet erroné est considéré comme perdu
+    \end{itemize}
+  \end{block}
+  \begin{block}{Limites de l’Ethernet}
+    \begin{itemize}
+      \item Pas de contrôle de flux
+      \item Pas de détection des erreurs et de mécanisme de retransmission
+      \item Adressage plat : au niveau mondiale : \\
+	trop de machine pour qu’un switch les connaissent tous \\
+	explosion des algorithmes de routage : plus court chemin
+    \end{itemize}
+    \hspace{1em}$\Rightarrow$ Ethernet est bien pour un réseau local
+  \end{block}
+\end{frame}
+
+\section{Couche IP}
+\subsection{Présentation}
+
+\protocolframe
+
+\begin{frame}
+  \frametitle{L’Internet Protocol}
+  \begin{block}{L’Internet Protocol}
+    \begin{itemize}
+      \item Internet = Inter -- Network
+      \item Protocole d’échange entre des réseaux Ethernet
+      \item Réseau hiérarchique pour faciliter le routage
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Format des adresses IPv4}
+    \begin{itemize}
+      \item 4 paquets de 8 bits : 192.168.23.1
+      \item Hiérarchie des réseaux : 192.168.23.0/255
+      \item Par exemple au ResEl :
+	\begin{itemize}
+	  \item 172.22.0.0/16 : Brest
+	    \begin{itemize}
+	      \item 172.22.192.0/19 : Utilisateurs
+	      \item 172.22.224.0/23 : Inscriptions
+	      \item \ldots
+	    \end{itemize}
+	  \item 172.23.0.0/16 : Rennes
+	\end{itemize}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Format des adresses IPv4}
+  \begin{block}{Catégories}
+    \begin{itemize}
+      \item Adresses IP publiques
+      \item Catégories d’adresses spéciales (non-exhaustif) :
+      \begin{center}
+        \begin{tabular}{|l|l|}
+          \hline
+          Bloc & Usage \\
+         \hline \hline
+         10.0.0.0/8 & Adresses privés \\
+         \hline
+         127.0.0.0/8 & Adresses de bouclage (localhost) \\
+         \hline
+         169.254.0.0/16 & Adresses locales auto-configurées \\
+         \hline
+         172.16.0.0/12 & Adresses privées \\
+         \hline
+         192.88.99.0/24 & 6to4 anycast \\
+         \hline
+         192.168.0.0/16 & Adresses privées \\
+         \hline
+         224.0.0.0/4 & Multicast \\
+         \hline
+         255.255.255.255.255/32 & Broadcast \\
+         \hline
+       \end{tabular}
+     \end{center}
+   \item À quelle catégorie appartient 172.22.215.2 ?
+   \item À quelle catégorie appartient 192.44.76.8 ?
+
+   \end{itemize}
+ \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Format des adresses IPv4}
+  \begin{block}{En binaire}
+    \begin{itemize}
+      \item 172.22.215.2 $\rightarrow$ 10101100 00010110 11010111 00000010
+      \item 19 premiers bits fixés : masque de sous-réseau \\
+	255.255.255.224 $\rightarrow$ 11111111 11111111 11100000 00000000
+      \item Retrouvez l’adresse réseau à partir d’une adresse de machine :
+	$
+	\begin{aligned}
+10101100 00010110 11010111 00000010 \\
+ 	\underline{ \& \   
+  11111111 11111111 11100000 00000000
+	} \\
+10101100 00010110 11000000 00000000 
+	\end{aligned} $
+	\vspace{10pt} 
+
+10101100 00010110 11000000 00000000 $\rightarrow$ 172.22.192.0
+
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les paquets IP}
+  \begin{block}{Entête IPv4}
+    \begin{center}
+      \small
+\begin{tikzpicture}[box/.style={rectangle,draw=black,text centered, text width=.3\textwidth, text centered},
+lbox/.style={rectangle,ultra thick,draw=black,text width=.956\textwidth},
+node distance=.005\textwidth,minimum height=1.7em, text centered]
+
+\packetinit
+\packetdelim{0}
+\packetdelim{8}
+\packetdelim{16}
+\packetdelim{24}
+\draw[dashed] (\packetphylength,.5\packetphyheight) -- + (0,0.5\packetphyheight) node [midway,anchor=east] {\tiny 31};
+
+\packet{4}{\tiny Version \\ = 4}
+\packet{4}{\tiny Longueur d’en-tête}
+\packet{8}{Type de service}
+\packet{16}{Longueur totale}
+\packetline
+\packet{16}{Identification}
+\packet{4}{\tiny Drapeaux}
+\packet{12}{Numéro de fragment}
+\packetline
+\packet{8}{\tiny Time To Live (TTL)}
+\packet{8}{Protocole}
+\packet{16}{Checksum}
+\packetline
+\packet{32}{Adresse source}
+\packetline
+\packet{32}{Adresse destination}
+\packetline
+\packet{32}{Options + Bourrage des options}
+\packetline
+\packet{32}{Données + Bourrage}
+
+      \end{tikzpicture}
+    \end{center}
+  \end{block}
+\end{frame}
+
+\subsection{Le routage}
+
+\begin{frame}[fragile]
+  \frametitle{Le routage}
+  \begin{block}{Les routeurs}
+    \begin{itemize}
+      \item Reçoit des paquets et les transmet sur la bonne interface
+      \item Utilise une table de routage
+      \item Table de routage d’une machine Linux :
+	\small
+	\begin{lstlisting}
+Kernel IP routing table
+Destination     Gateway         Genmask       Iface
+172.22.192.0    *               255.255.224.0 eth0
+default         grandours.cop.m 0.0.0.0       eth0
+\end{lstlisting}
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Table de routage de Grand Ours}
+  \tiny
+  \begin{lstlisting}
+grandours>show ip route 
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is 172.16.29.1 to network 0.0.0.0
+
+C    192.168.29.0/24 is directly connected, Vlan990
+R    192.44.75.0/24 [120/1] via 172.16.29.1, 00:00:31, Vlan999
+     192.44.76.0/24 is variably subnetted, 3 subnets, 2 masks
+S       192.44.76.0/24 [1/0] via 172.16.19.1
+S       192.44.76.8/32 [1/0] via 172.16.29.1
+S       192.44.76.108/32 [1/0] via 172.16.29.1
+C    172.16.0.0/16 is directly connected, Vlan999
+     172.23.0.0/16 is variably subnetted, 5 subnets, 3 masks
+S       172.23.192.0/19 [1/0] via 172.16.29.1
+S       172.23.42.0/23 [1/0] via 172.16.29.1
+S       172.23.2.0/23 [1/0] via 172.16.29.1
+S       172.23.0.0/23 [1/0] via 172.16.29.1
+S       172.23.99.0/24 [1/0] via 172.16.29.1
+\end{lstlisting}
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Table de routage de Grand Ours}
+  \tiny
+  \begin{lstlisting}
+     172.22.0.0/16 is variably subnetted, 8 subnets, 4 masks
+R       172.22.150.35/32 [120/1] via 172.16.29.1, 00:00:31, Vlan999
+C       172.22.224.0/23 is directly connected, Vlan999
+C       172.22.230.0/24 is directly connected, Vlan999
+C       172.22.228.0/23 is directly connected, Vlan999
+C       172.22.192.0/19 is directly connected, Vlan999
+C       172.22.42.0/23 is directly connected, Vlan994
+C       172.22.2.0/23 is directly connected, Vlan997
+C       172.22.92.0/24 is directly connected, Vlan992
+     192.108.115.0/24 is variably subnetted, 2 subnets, 2 masks
+S       192.108.115.12/32 [1/0] via 172.16.29.1
+S       192.108.115.0/24 [1/0] via 172.16.19.1
+     193.50.97.0/25 is subnetted, 1 subnets
+R       193.50.97.128 [120/1] via 172.16.29.1, 00:00:31, Vlan999
+     10.0.0.0/16 is subnetted, 3 subnets
+S       10.29.0.0 [1/0] via 172.16.19.1
+S       10.35.0.0 [1/0] via 172.16.29.1
+S       10.66.0.0 [1/0] via 172.16.19.1
+S    192.168.0.0/24 [1/0] via 172.16.29.1
+S    192.108.118.0/24 [1/0] via 172.16.19.1
+S    192.108.117.0/24 [1/0] via 172.16.19.1
+S    192.108.116.0/24 [1/0] via 172.16.19.1
+S*   0.0.0.0/0 [1/0] via 172.16.29.1
+S    192.168.0.0/16 [1/0] via 172.16.19.1
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Traceroute}
+  \tiny
+  \lstset{breaklines=false}
+  \begin{lstlisting}
+traceroute [(172.22.215.2:33456) -> (66.211.214.131:33457)], protocol icmp, algo hopbyhop, duration 4 s
+ 1  grandours.cop.maisel.enst-bretagne.fr (172.22.199.1)  0.582 ms   0.630 ms   0.862 ms 
+ 2  serveur.old.maisel.enst-bretagne.fr (172.16.29.1)  0.410 ms   0.424 ms   0.431 ms 
+ 3  galaxie-76.enst-bretagne.fr (192.44.76.1)  0.923 ms   0.781 ms   0.711 ms 
+ 4  gw-out.enst-bretagne.fr (192.108.117.65)  0.716 ms   0.989 ms   0.746 ms 
+ 5  vl807-te1-5-brest1-rtr-021.noc.renater.fr (193.51.188.10)  1.436 ms   1.184 ms   1.171 ms 
+ 6  te1-3-lannion-rtr-021.noc.renater.fr (193.51.179.130)  63.165 ms !T2   60.969 ms !T2   62.698 ms !T2 
+   MPLS Label 27 TTL=1
+ 7  te1-3-stbrieuc-rtr-021.noc.renater.fr (193.51.179.126)  16.769 ms !T3   16.659 ms !T3   16.831 ms !T3 
+   MPLS Label 169 TTL=1
+ 8  te2-1-rennes-rtr-021.noc.renater.fr (193.51.179.122)  16.765 ms !T4   16.879 ms !T4   16.683 ms !T4 
+   MPLS Label 138 TTL=1
+ 9  te4-1-caen-rtr-021.noc.renater.fr (193.51.189.54)  16.781 ms !T5   16.674 ms !T5   16.882 ms !T5 
+   MPLS Label 408 TTL=1
+10  te4-1-rouen-rtr-021.noc.renater.fr (193.51.189.46)  17.016 ms !T6   16.722 ms !T6   16.693 ms !T6 
+   MPLS Label 130 TTL=1
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Traceroute}
+  \tiny
+  \lstset{breaklines=false}
+  \begin{lstlisting}
+11  te0-0-0-1-paris1-rtr-001.noc.renater.fr (193.51.189.49)  17.563 ms !T7   17.058 ms !T7   17.289 ms !T7 
+   MPLS Label 16401 TTL=255
+12  te0-3-1-0-lyon1-rtr-001.noc.renater.fr (193.51.189.126)  17.500 ms   17.248 ms   17.236 ms 
+13  xe-8-0-0.edge5.Paris1.Level3.net (212.73.207.173)  96.025 ms   95.993 ms   96.898 ms 
+14  ae-34-52.ebr2.Paris1.Level3.net (4.69.139.225)  96.227 ms   96.189 ms   96.130 ms 
+15  ae-47-47.ebr1.Frankfurt1.Level3.net (4.69.143.141)  106.159 ms   105.767 ms   105.385 ms 
+16  ae-81-81.csw3.Frankfurt1.Level3.net (4.69.140.10)  113.334 ms   161.281 ms   111.731 ms 
+17  ae-82-82.ebr2.Frankfurt1.Level3.net (4.69.140.25)  106.770 ms   106.756 ms   106.562 ms 
+18  ae-41-41.ebr2.Washington1.Level3.net (4.69.137.50)  106.990 ms   106.833 ms   106.622 ms 
+19  ae-72-72.csw2.Washington1.Level3.net (4.69.134.150)  112.615 ms   116.777 ms   106.913 ms 
+20  ae-71-71.ebr1.Washington1.Level3.net (4.69.134.133)  107.090 ms   107.171 ms   107.630 ms 
+21  ae-5-5.car1.Pittsburgh3.Level3.net (4.69.135.241)  112.523 ms   113.242 ms   113.261 ms 
+22  ae-11-11.car2.Pittsburgh3.Level3.net (4.69.135.246)  251.504 ms   201.958 ms   152.441 ms 
+23  VELOCITYNET.car2.Pittsburgh3.Level3.net (4.49.110.66)  120.077 ms   120.124 ms   120.167 ms 
+24  cust02-ge-0-0.eri.velocity.net (66.211.250.2)  121.259 ms   120.932 ms   120.730 ms 
+25  gudrun.archlinux.org (66.211.214.131)  120.003 ms   204.690 ms   155.079 ms 
+  \end{lstlisting}
+\end{frame}
+
+\subsection{ARP (Adress Resolution Protocol)}
+
+\protocolframe
+
+\begin{frame}
+  \frametitle{Les requêtes ARP}
+  \begin{block}{But d’ARP}
+    \begin{itemize}
+      \item ARP : Address Resolution Protocol
+      \item Protocole générique trouver une adresse matériel
+      \item Utilisation : Résolution IP $\rightarrow$ MAC
+    \end{itemize}
+	\begin{center}
+        \small
+          \begin{tikzpicture}[box/.style={rectangle,draw=black,text centered, text width=.3\textwidth, text centered},
+lbox/.style={rectangle,ultra thick,draw=black,text width=.956\textwidth},
+node distance=.005\textwidth,minimum height=1.7em, text centered]
+
+\packetinit
+\packetdelim{0}
+\packetdelim{8}
+\packetdelim{16}
+\packetdelim{24}
+\draw[dashed] (\packetphylength,.5\packetphyheight) -- + (0,0.5\packetphyheight) node [midway,anchor=east] {\tiny 31};
+
+\packet{16}{Hardware Type}
+\packet{16}{Protocol Type}
+\packetline
+\packet{8}{\tiny Hardware Address Length}
+\packet{8}{\tiny Protocol Adress Length}
+\packet{16}{Operation}
+\packetline
+\packet{32}{Sender Hardware Address}
+\packetline
+\packet{32}{Sender Protocol Address}
+\packetline
+\packet{32}{Target Hardware Address}
+\packetline
+\packet{32}{Target Protocol Address}
+        \end{tikzpicture}
+      \end{center}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Les requêtes ARP}
+  \begin{block}{Requête ARP en IPv4}
+	\begin{center}
+        \small
+          \begin{tikzpicture}[box/.style={rectangle,draw=black,text centered, text width=.3\textwidth, text centered},
+lbox/.style={rectangle,ultra thick,draw=black,text width=.956\textwidth},
+node distance=.005\textwidth,minimum height=1.7em, text centered]
+
+\packetinit
+\packetdelim{0}
+\packetdelim{8}
+\packetdelim{16}
+\packetdelim{24}
+\draw[dashed] (\packetphylength,.5\packetphyheight) -- + (0,0.5\packetphyheight) node [midway,anchor=east] {\tiny 31};
+
+\packet{16}{\tiny Hardware Type = (01 -- Ethernet)}
+\packet{16}{Protocol Type = (0x800 -- IP)}
+\packetline
+\packet{8}{\tiny Hardware Address Length = 6}
+\packet{8}{\tiny Protocol Adress Length = 4}
+\packet{16}{\tiny Operation \\
+01 -- Request  02 -- Reply }
+\packetline
+\packet{32}{Sender MAC Address}
+\packetline
+\packet{32}{Sender IP Address}
+\packetline
+\packet{32}{Target MAC Address (\macaddr{00:00:00:00:00:00} if request)}
+\packetline
+\packet{32}{Target IP Address}
+        \end{tikzpicture}
+      \end{center}
+  \end{block}
+\end{frame}
+
+\subsection{Transmission d’un paquet IP}
+\begin{frame}
+  \frametitle{Transmission d’un paquet IP}
+  \begin{block}{Description du réseau}
+    \begin{itemize}
+      \item Sous-réseau 172.22.192.0/19
+      \item Machine A (@a, 172.22.215.2)
+      \item Machine B (@b, 172.22.203.127)
+      \item Routeur C grandours (@c, 172.22.199.1)
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \setbeamercovered{invisible}
+  \begin{block}{Transmission de A vers B}
+    \begin{itemize}
+	\item A et B sont dans le même sous-réseau
+	\item<2-> A émet une requête ARP who-has 172.22.203.172
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & op & target mac & target IP \\
+	    \hline
+	    broadcast & @a & ARP & request & 0 & 172.22.203.172 \\
+	    \hline
+	  \end{tabular}
+	\item<3-> B répond (@b, 172.22.203.172)
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & op & target mac & target IP \\
+	    \hline
+	    @a & @b & ARP & reply & @b & 172.22.203.172 \\
+	    \hline
+	  \end{tabular}
+	\item<4-> A envoie le paquet IP à l’adresse @b
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & ip src & ip dest \\
+	    \hline
+	    @b & @a & IP & 172.22.215.2 & 172.22.203.172 \\
+	    \hline
+	  \end{tabular}
+    \end{itemize}
+  \end{block}
+\end{frame}
+\begin{frame}
+  \setbeamercovered{invisible}
+    \begin{block}{Transmission de A vers google.fr}
+      \begin{itemize}
+	\item A et C ne sont pas dans le même sous-réseau
+	\item<2-> le paquet doit être routé par C d’après la table de routage
+	\item<3-> A émet une requête ARP who-has 172.22.199.1
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & op & target mac & target IP \\
+	    \hline
+	    broadcast & @a & ARP & request & 0 & 172.22.199.1 \\
+	    \hline
+	  \end{tabular}
+	\item<4-> C répond (@c, 172.22.199.1)
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & op & target mac & target IP \\
+	    \hline
+	    @a & @c & ARP & reply & @c & 172.22.199.1 \\
+	    \hline
+	  \end{tabular}
+	\item<5-> A envoie le paquet IP à l’adresse @c qui le retransmet en utilisant sa table de routage
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & ip src & ip dest \\
+	    \hline
+	    @c & @a & IP & 172.22.215.2 & 66.249.92.104 \\
+	    \hline
+	  \end{tabular}
+	\item<6-> et C va renvoyer le paquet à D par exemple et ainsi de suite jusqu’à destination finale
+	  \begin{tabular}{|c|c|c|c|c|c|}
+	    \hline
+	    dest mac & src mac & proto & ip src & ip dest \\
+	    \hline
+	    @d & @c & IP & 172.22.215.2 & 66.249.92.104 \\
+	    \hline
+	  \end{tabular}
+      \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{NAT -- Network Adress Translation}
+
+%
+\end{document}

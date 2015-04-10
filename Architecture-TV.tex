@@ -1,0 +1,555 @@
+%%
+%% Exploitation de la plate-forme IPTV du ResEl
+%%
+%% Copyright (C) 2005 Association ResEl <gestion@resel.enst-bretagne.fr>
+%% Ce document est un document libre ; vous pouvez le redistribuer et/ou
+%% le modifier au titre des clauses de la Licence Publique Générale GNU,
+%% telle que publiée par la Free Software Foundation ; soit la version 2
+%% de la Licence, ou (à votre discrétion) une version ultérieure
+%% quelconque. Ce docuement est distribué dans l'espoir qu'il sera utile,
+%% mais SANS AUCUNE GARANTIE ; sans même une garantie implicite de
+%% COMMERCIABILITE ou DE CONFORMITE A UNE UTILISATION PARTICULIERE. Voir
+%% la Licence Publique Générale GNU pour plus de détails. Vous devriez
+%% avoir reçu un exemplaire de la Licence Publique Générale GNU avec ce
+%% document ; si ce n'est pas le cas, écrivez à la Free Software
+%% Foundation Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+%% 02110-1301, USA.
+
+%\documentclass[xcolor=pst,compress]{beamer}
+\documentclass{beamer}
+% xcolor = bst pour pouvoir utiliser PSTricks et Beamer
+
+\usepackage[francais]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{pstricks,xspace}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{color}
+\usepackage{listings}
+
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows}
+\usetikzlibrary{calc}
+
+\def«{\og}
+\def»{\fg}
+
+
+%% Rajoute un \strut pour que la couleur résiste à un \item devant...
+\newcommand{\vavers}{\strut{\red$\leadsto$}\xspace}
+
+\mode<presentation>
+{
+  %\usetheme{Warsaw}
+
+  % Variation sur le thème de Warsaw
+  % (principalement à cause du rappel du plan en haut
+  %  qui est devenu trop long)
+  \useinnertheme{rounded}
+  \useoutertheme{infolines}
+  \usecolortheme{orchid}
+  \usecolortheme{whale}
+
+  \setbeamercovered{transparent}
+
+  % On supprime la barre de navigation
+  \setbeamertemplate{navigation symbols}{}
+}
+
+\title[Architecture IPTV ResEl]
+{ResEl~105: Exploitation de la plate-forme IPTV du ResEl}
+
+\author[Association ResEl]
+{
+  Association ResEl\\
+  \texttt{<gestion@resel.fr>}
+}
+
+\institute[Réseau des Élèves]
+{
+  Ludovic Boué\\
+  Réseau des Élèves de Télécom Bretagne
+
+}
+
+\date{\today}
+
+\subject{ResEl~104 : Exploitation de la plate-forme IPTV du ResEl}
+\keywords{ResEl,réseau,IPTV,sat,TNT,TV}
+
+
+% Logo du ResEl
+%\pgfdeclareimage[height=0.4cm]{resel}{logo_ResEl}
+%\logo{\pgfuseimage{resel}}
+
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+\AtBeginSection[]
+{
+  \begin{frame}<beamer>
+    \frametitle{Plan}
+    \scriptsize
+    \tableofcontents[currentsection]
+    %\tableofcontents[currentsection,hideallsubsections]
+    \normalsize
+  \end{frame}
+}
+
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+%\AtBeginSubsection[]
+%{
+%  \begin{frame}<beamer>
+%    \frametitle{Plan}
+%    \scriptsize
+%    \tableofcontents[currentsection,currentsubsection]
+%    \normalsize
+%  \end{frame}
+%}
+
+
+% If you wish to uncover everything in a step-wise fashion, uncomment
+% the following command:
+%\beamerdefaultoverlayspecification{<+->}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
+  \frametitle{Licence}
+
+  \begin{block}{}
+    Ces slides sont sous licence GPL (General Public Licence). Ils
+    sont disponibles, avec leur code source sur le site de
+    l'Association ResEl
+    (\href{http://resel.fr}{\texttt{http://resel.fr}}).
+
+    \vspace{1cm}
+
+    Ils ont été créés à partir de logiciels libres (\LaTeX -beamer).
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}
+  \frametitle{Plan}
+  \scriptsize
+  \tableofcontents[hideallsubsections]
+  \normalsize
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\logo{}
+\section{Introduction}
+
+\begin{frame}
+  \frametitle{Origine}
+
+  \begin{block}{Pourquoi ?}
+   \begin{itemize}
+        \item Problématique : Une passerelle DVB-T/S est hors de prix pour une association (15 000 euros)
+        \item Comment : Concevoir notre propre système basée un des logiciels libres 
+                \begin{itemize}
+                \item Capter le signal avec des tuners supportés sous Linux via l'API DVB
+                \item Traiter ces données à l'aide d'un programme léger et évolutif
+                \item Transmettre ces services sur l'infrastructure réseau existante
+               \end{itemize}
+  \end{itemize}
+
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Démon}
+\subsection{Généralités}
+
+\begin{frame}
+  \frametitle{Démon IPTV}
+
+  \begin{block}{MuMuDVB}
+   \begin{itemize}
+        \item Application légère codée en C 
+                \begin{itemize}
+        	\item Open source et gratuite
+        	\item Développé à la base au Cr@ns $\Rightarrow$ Federez 
+                \end{itemize}
+        \item Tout est en ligne (doc, sources, tutoriaux) \href{http://mumudvb.braice.net/mumudrupal}{\texttt{http://mumudvb.braice.net/mumudrupal}}
+        \item Signaler un bug ou demander une fonctionnalité \href{http://mumuredmine.braice.net/projects/mumudvb/issues}{\texttt{http://mumuredmine.braice.net/projects/mumudvb/issues}}
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Fonctionnement}
+
+  \begin{block}{MuMuDVB}
+   \begin{itemize}
+        \item Lit le buffer d'une carte tuner et encapsule le payload dans des paquets IP
+        \item Plusieurs interfaces utilisateurs possibles 
+                \begin{itemize}
+                \item Unicast HTTP (utilisé pour la supervision)
+                \item Multicast/unicast UDP ou UDP/RTP
+                \item Support IPv6
+                \end{itemize}
+        \item Chaque service est annoncé via SAP et devient visible dans VLC
+        \item Un watchdog Python (ResEl) vérifie que le tous les process soient bien lancés
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{Configuration}
+\begin{frame}
+  \frametitle{Autoconfiguration complète}
+
+  \begin{block}{MuMuDVB}
+   \begin{itemize}
+        \item En cas d'autoconfiguration complète, on fournit :
+                \begin{itemize}
+                \item les informations de configuration de tuner
+                \item la liste des SID des services à diffuser
+                \item le template de nom de chaîne
+                \end{itemize}
+        \item Fichier de configuration stoqués dans /srv/tnt ou /srt/sat  
+        \item Fichier de configuration complets stoqués dans /tmp
+  \end{itemize}
+  \end{block}
+  \begin{block}{SVN}
+   \begin{itemize}
+        \item Les configurations sont à jour dans le svn : /scripts/tnt et /scripts/sat.
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\lstset{language=bash,basicstyle=\footnotesize}
+\begin{frame}[fragile]
+  \frametitle{Autoconfiguration complète}
+  \begin{block}{MuMuDVB}
+    \begin{itemize}
+      \item Multiplex TNT : freq = 585 MHz
+        \small
+        \begin{lstlisting}
+freq=586
+autoconfiguration=full
+server_id=4
+
+autoconf_name_template=[%server] %2lcn - %name
+autoconf_ip_header=239.255.2.%number
+autoconf_sid_list=1281 1282 1283
+        \end{lstlisting}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Autoconfiguration partielle}
+  \begin{block}{MuMuDVB}
+   \begin{itemize}
+        \item En cas d'autoconfiguration partielle, on fournit :
+                \begin{itemize}
+                \item les informations de configuration de tuner
+                \item pour chacune des chaînes : IP, nom, SID, PMT
+                \end{itemize}
+        \item Utilisé pour la TNT car on souhaite fixer le numéro de chaîne comme dernier octet d'adresse IP
+        \item Impossible en autoconfiguration complète pour le moment 
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\lstset{language=bash,basicstyle=\footnotesize}
+\begin{frame}[fragile]
+  \frametitle{Autoconfiguration partielle}
+  \begin{block}{MuMuDVB}
+    \begin{itemize}
+      \item Transpondeur sat : 19.2E, freq = 11508.50, pol = V 
+        \small
+        \begin{lstlisting}
+freq=11508.50
+pol=V
+srate=22000
+sat_number=1
+autoconfiguration=partial
+
+ip4=239.255.140.0
+name=[France] Montagne TV
+service_id=7001
+pids=751
+
+ip4=239.255.140.1
+name=[Spain] ETB Sat (Euskal Telebista)
+service_id=7002
+pids=257
+        \end{lstlisting}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Infrastructure}
+\subsection{Serveurs}
+\begin{frame}
+  \frametitle{Serveurs}
+
+  \begin{block}{MuMuDVB}
+   \begin{itemize}
+        \item A Brest, chaque serveur est dédié à un mode de réception
+        \item Nous avons 5 passerelles DVB
+                \begin{itemize}
+                \item 2 passerelles DVB-T
+                \item 3 passerelles DVB-S/S2
+                \end{itemize}
+        \item A Rennes, un seul serveur mutualisé
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{Modèles de cartes tuners}
+\begin{frame}
+  \frametitle{Cartes tuners}
+
+        \begin{block}{Cartes utilisées}
+                \begin{itemize}
+                \item A compléter
+                \end{itemize}
+        \end{block}
+\end{frame}
+
+\subsection{QoS}
+\begin{frame}
+  \frametitle{QoS}
+
+        \begin{block}{QoS à l'émission}
+                \begin{itemize}
+                \item on tague les flux IPTV avec un champ DSCP prioritaire (DSCP 34 ou AF41):
+                \item iptables -A OUTPUT -t mangle -p udp  -j DSCP --set-dscp-class AF41
+                \item On peut vérifier :
+                \item iptables -L -t mangle -n -v
+                \end{itemize}
+        \end{block}
+
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{QoS sur les switchs}
+  \begin{block}{Cisco}
+    \begin{itemize}
+      \item Visualiser les champs DSCP en réception
+        \small
+        \begin{lstlisting}
+petitours2#sh mls qos interface GigabitEthernet0/18 statistics 
+GigabitEthernet0/18 (All statistics are in packets)
+
+  dscp: incoming  
+-------------------------------
+Ingress
+  dscp: incoming no_change classified policed dropped (in pkts)
+  30-34 :           0           0        0      0      2046602  
+        \end{lstlisting}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{TNT}
+\subsection{Administation directe}
+
+\begin{frame}[fragile]
+  \frametitle{Script d'init}
+  \begin{block}{Status}
+    \begin{itemize}
+      \item Connexion directe sur le serveur via SSH 
+      \item Etat de la diffusion :
+	\small
+	\begin{lstlisting}
+	/etc/init.d/tnt status
+	Flux 1 actif sur la carte 0
+	Flux 2 actif sur la carte 1
+	Flux 4 actif sur la carte 2
+	Flux 6 actif sur la carte 3
+	\end{lstlisting}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Lister les processsus}
+  \begin{block}{Processus}
+    \begin{itemize}
+      \item Commande "ps" :
+        \small
+        \begin{lstlisting}
+	tv       21792  0.0  1.0  11:25   0:01 /usr/bin/python /srv/tnt/tv_watchdog.py
+	tv       21804  1.6  0.6  11:26   8:45 /usr/bin/mumudvb -c /tmp/R3.0.mumudvb.conf
+	tv       21811  2.2  0.6  11:26  11:55 /usr/bin/mumudvb -c /tmp/R5.1.mumudvb.conf
+        \end{lstlisting}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Journaux}
+  \begin{block}{Journaux}
+    \begin{itemize}
+      \item Visualiser les journaux :
+        \small
+        \begin{lstlisting}
+        sudo tail -f /var/log/messages
+        \end{lstlisting}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Installation d'une passerelle}
+\subsection{Installation du démon}
+\begin{frame}
+  \frametitle{Installation}
+
+        \begin{block}{Paquet Debian}
+                \begin{itemize}
+                \item installation du paquet :
+                \item apt-get install mumudvb
+                \end{itemize}
+        \end{block}
+\end{frame}
+
+\subsection{Configuration des services}
+\begin{frame}
+  \frametitle{Configuration}
+        \begin{block}{SVN}
+                \begin{itemize}
+                \item Télécharger les fichiers de configuration depuis le SNV :
+                \item apt-get install subversion
+                \item cd /srv
+                \item svn checkout https://svn.resel.fr/scripts/tnt/ tnt
+                \item cd tnt
+                \end{itemize}
+        \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Diagnostic}
+\subsection{Interace d'administration}
+\begin{frame}
+  \frametitle{Accès à l'interface}
+   \begin{block}{Interface web}
+   \begin{itemize}
+        \item Application codée en PHP, rendu basé sur RA2        
+        \item Nombreuse fonctionnalitées        
+        \item Interroge le webservice XML de chaque démon
+        \item En dur :
+                	\begin{itemize}
+        		\item Liste des serveurs,
+        		\item Liste des cartes tuners,
+        		\item Liste des multiplexes TNT.
+                	\end{itemize}
+        \item Sur RA2 \href{http://admin.resel.fr/tv}{\texttt{http://admin.resel.fr/tv}}
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{A développer}
+   \begin{block}{Interface web}
+   \begin{itemize}
+        \item Dynamiser l'interface (HTML5/AJAX)
+	\item Ajouter la possibilité de trier les tableaux
+        \item Afficher les statistiques de débits consomés (chaîne, mux, serveur)
+        \item Grapher ces statistiques et nombres de chaînes UP 
+   \end{itemize}
+   \end{block}
+\end{frame}
+
+
+\subsection{Passerelles}
+\begin{frame}
+  \frametitle{Passerelles}
+
+        \begin{block}{Flux diffusés}
+                \begin{itemize}
+                \item affiche les flux diffusés sur la carte de service :
+                \item iftop -i eth999
+                \end{itemize}
+        \end{block}
+\end{frame}
+
+\subsection{Réseau}
+\begin{frame}
+  \frametitle{Réseau}
+        \begin{block}{Switch}
+                \begin{itemize}
+                \item Filtrage du multicast sur les switchs :
+                \item show ip igmp snooping
+                \item show ip igmp groups
+                \end{itemize}
+        \end{block}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Perspectives}
+\begin{frame}
+  \frametitle{Perspectives d'amélioration}
+
+	\begin{block}{Interface web}
+		\begin{itemize}
+		\item amélioration de l'interface d'admin ;
+		\item tableaux association multiplex/transpondeur et machine ;
+		\end{itemize}
+	\end{block}
+	\begin{block}{Diffusion}
+		\begin{itemize}
+		\item ajout de chaînes satellite à Rennes $\Rightarrow$ augementation de capacité ;
+		\item renouvellement des serveurs/tuners ;
+		\item transcoding ;
+		\item diffusion mobile ;
+		\item diffusion IPv6.
+		\end{itemize}	
+	\end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Conclusion}
+\begin{frame}
+  \frametitle{Conclusion}
+
+  \begin{block}{}
+   \begin{itemize}
+	\item Durant ces années au ResEl nous avons :
+		\begin{itemize}
+		\item changé toutes les passerelles DVB pour fiabiliser la diffusion
+		\item mise en supervision les processus de diffusion
+		\item utilisé l'autoconfiguration des services TV 
+		\item participé activement au développpemnt de MuMuDVB
+		\item développé une interface de supervision
+		\item satisfait les demandes des utilisateurs en ajoutant la diffusion du satellite
+		\end{itemize}
+  \end{itemize}
+
+  \end{block}
+\end{frame}
+
+
+
+\end{document}
